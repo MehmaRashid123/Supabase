@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fake Weather API — Cards</title>
+  <style>
+    :root{
+      --bg: linear-gradient(180deg,#0f1724,#071225);
+      --card: rgba(255,255,255,0.06);
+      --glass-border: rgba(255,255,255,0.08);
+      --accent: #7b61ff;
+      --muted: rgba(255,255,255,0.78);
+      --glass-blur: 8px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,system-ui,Arial,sans-serif}
+    html,body{height:100%}
+    body{
+      min-height:100vh;
+      background: var(--bg);
+      color:var(--muted);
+      padding:28px;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    header{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      margin-bottom:20px;
+    }
+    header h1{
+      color:white;font-size:20px;
+      letter-spacing:0.2px;
+    }
+    .controls{
+      margin-left:auto;display:flex;gap:10px;align-items:center;
+    }
+    .controls input, .controls button{
+      padding:8px 10px;border-radius:8px;border:0;background:rgba(255,255,255,0.06);color:var(--muted)
+    }
+    .controls button.primary{
+      background:linear-gradient(90deg,var(--accent),#1fd1f9);color:white;font-weight:600;border:0;cursor:pointer;
+    }
+
+    main{
+      display:grid;
+      grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
+      gap:18px;
+      margin-top:18px;
+    }
+
+    .card{
+      background: var(--card);
+      border-radius:14px;
+      padding:14px;
+      backdrop-filter: blur(var(--glass-blur));
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 6px 20px rgba(2,6,23,0.6);
+      color: #fff;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .city {
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+    }
+    .city h2{font-size:18px;margin:0}
+    .temp{
+      font-weight:700;font-size:32px;
+    }
+    .cond{font-size:13px;opacity:0.9;margin-top:6px}
+
+    .meta{
+      display:flex;gap:12px;margin-top:10px;font-size:13px;opacity:0.9;
+    }
+    .meta div{display:flex;flex-direction:column}
+
+    .hourly{
+      display:flex;gap:8px;margin-top:12px;overflow:auto;padding-bottom:6px;
+    }
+    .hour{
+      min-width:48px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.03);text-align:center;font-size:12px;
+    }
+
+    .status {
+      position:absolute;right:10px;top:10px;font-size:12px;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.03);
+    }
+
+    .empty{
+      color:rgba(255,255,255,0.6);text-align:center;padding:40px;border:1px dashed rgba(255,255,255,0.04);border-radius:12px;
+    }
+
+    footer{margin-top:22px;color:rgba(255,255,255,0.55);font-size:13px}
+    a.small{color:inherit;opacity:0.85;text-decoration:underline}
+    @media (max-width:520px){
+      header{flex-direction:column;align-items:flex-start;gap:10px}
+      .controls{margin-left:0;width:100%}
+      .controls input{flex:1;width:100%}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Fake Weather API — Cards</h1>
+      <div style="font-size:13px;opacity:0.8">Demo using a mock API function that returns Promise-based weather data.</div>
+    </div>
+
+    <div class="controls" role="search">
+      <input id="cityInput" placeholder="Add city (e.g., Karachi)" aria-label="City">
+      <button id="addBtn" class="primary">Add</button>
+      <button id="refreshBtn" title="Refresh all">Refresh All</button>
+    </div>
+  </header>
+
+  <main id="cardsContainer">
+    <!-- Cards will be inserted here -->
+  </main>
+
+  <footer>
+    This uses <strong>fakeFetchWeather(city)</strong>. To use a real API, replace that function with an actual fetch call to OpenWeather / WeatherAPI. <a href="#" class="small" id="howTo">How to switch</a>
+  </footer>
+
+<script>
+/*
+  ======= Fake Weather API (mock) =======
+  fakeFetchWeather(city) simulates network latency and returns JSON
+  Structure returned:
+  {
+    city: 'City Name',
+    country: 'PK',
+    tempC: 30,
+    condition: 'Clear',
+    humidity: 55,
+    windKph: 12,
+    icon: '☀️'  // could be URL or emoji
+    forecast: [ {hour: '14:00', tempC: 30}, ... ]
+  }
+*/
+function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+function fakeFetchWeather(city){
+  // Normalize city name
+  const name = String(city || 'Unknown').trim();
+  return new Promise((resolve) => {
+    // simulate variable network time
+    const delay = 300 + Math.random()*600;
+    setTimeout(() => {
+      const baseTemp = randomInt(5,35);
+      const conditions = [
+        ['Sunny','☀️'], ['Clear','🌤️'], ['Cloudy','☁️'],
+        ['Partly Cloudy','⛅'], ['Rain','🌧️'], ['Thunder','⛈️'],
+        ['Snow','❄️'], ['Mist','🌫️']
+      ];
+      const pick = conditions[Math.floor(Math.random()*conditions.length)];
+      const forecast = [];
+      const now = new Date();
+      for(let i=0;i<8;i++){
+        const h = new Date(now.getTime() + i*60*60*1000);
+        const hour = h.getHours().toString().padStart(2,'0') + ':00';
+        forecast.push({hour, tempC: Math.round(baseTemp + Math.sin(i/2)*3 + randomInt(-1,2))});
+      }
+
+      resolve({
+        city: name,
+        country: (Math.random()>0.5? 'PK' : ['US','GB','JP','IN','AE'][randomInt(0,4)]),
+        tempC: baseTemp + randomInt(-2,4),
+        condition: pick[0],
+        humidity: randomInt(30,90),
+        windKph: randomInt(2,32),
+        icon: pick[1],
+        forecast
+      });
+    }, delay);
+  });
+}
+
+/* ======= UI code ======= */
+
+const seedCities = ['Karachi','Lahore','Islamabad','London','Tokyo'];
+const container = document.getElementById('cardsContainer');
+const cityInput = document.getElementById('cityInput');
+const addBtn = document.getElementById('addBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+const howTo = document.getElementById('howTo');
+
+let cityStates = {}; // cache of { cityName: {loading, data, lastUpdated} }
+
+function createCardSkeleton(city){
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.setAttribute('data-city', city);
+  card.innerHTML = `
+    <div class="status">Loading...</div>
+    <div class="city"><h2 class="cityName">${city}</h2><div class="temp">--°C</div></div>
+    <div class="cond">—</div>
+    <div class="meta">
+      <div><small>Humidity</small><strong class="hum">--%</strong></div>
+      <div><small>Wind</small><strong class="wind">-- kph</strong></div>
+      <div><small>Country</small><strong class="country">—</strong></div>
+    </div>
+    <div class="hourly"></div>
+  `;
+  return card;
+}
+
+async function renderCity(city){
+  const key = city.toLowerCase();
+  // create skeleton or reuse
+  let card = container.querySelector(`[data-city="${city}"]`);
+  if(!card){
+    card = createCardSkeleton(city);
+    container.prepend(card);
+  }
+  // show loading
+  card.querySelector('.status').textContent = 'Loading...';
+  card.querySelector('.temp').textContent = '--°C';
+  card.querySelector('.cond').textContent = '—';
+  card.querySelector('.hum').textContent = '--%';
+  card.querySelector('.wind').textContent = '-- kph';
+  card.querySelector('.country').textContent = '—';
+  card.querySelector('.hourly').innerHTML = '';
+  // call fake API (replace with real fetch if needed)
+  try{
+    const data = await fakeFetchWeather(city);
+    cityStates[key] = { loading:false, data, lastUpdated: Date.now() };
+
+    card.querySelector('.status').textContent = 'Updated';
+    card.querySelector('.temp').textContent = `${data.tempC}°C`;
+    card.querySelector('.cond').textContent = `${data.icon} ${data.condition}`;
+    card.querySelector('.hum').textContent = `${data.humidity}%`;
+    card.querySelector('.wind').textContent = `${data.windKph} kph`;
+    card.querySelector('.country').textContent = data.country || '—';
+
+    // hourly
+    const hourly = card.querySelector('.hourly');
+    data.forecast.forEach(f => {
+      const el = document.createElement('div');
+      el.className = 'hour';
+      el.innerHTML = `<div style="font-weight:700">${f.tempC}°</div><div style="opacity:0.85">${f.hour}</div>`;
+      hourly.appendChild(el);
+    });
+  }catch(err){
+    card.querySelector('.status').textContent = 'Error';
+    card.querySelector('.cond').textContent = 'Unable to fetch';
+    console.error('fetch error', err);
+  }
+}
+
+function addCity(city){
+  if(!city) return;
+  const normalized = city.trim();
+  // prevent duplicates (case-insensitive)
+  const exists = Array.from(container.querySelectorAll('.card')).some(c => c.getAttribute('data-city').toLowerCase() === normalized.toLowerCase());
+  if(exists){
+    alert(`${normalized} is already added`);
+    return;
+  }
+  renderCity(normalized);
+}
+
+addBtn.addEventListener('click', ()=>{
+  addCity(cityInput.value || '');
+  cityInput.value = '';
+});
+
+cityInput.addEventListener('keyup', (e)=>{ if(e.key === 'Enter'){ addCity(cityInput.value); cityInput.value=''; } });
+
+refreshBtn.addEventListener('click', ()=>{
+  const cards = Array.from(container.querySelectorAll('.card'));
+  cards.forEach(c => {
+    const city = c.getAttribute('data-city');
+    renderCity(city);
+  });
+});
+
+// show how-to modal (simple)
+howTo.addEventListener('click', (e)=>{
+  e.preventDefault();
+  alert(`To use a real API replace fakeFetchWeather(city) with a real fetch to an API.\n\nExample (OpenWeatherMap):\n\nfetch('https://api.openweathermap.org/data/2.5/weather?q='+encodeURIComponent(city)+'&appid=YOUR_KEY&units=metric')\n  .then(r=>r.json())\n  .then(json => {/* map json to same shape used in UI */})`);
+});
+
+/* Seed initial cities */
+seedCities.forEach(c => renderCity(c));
+</script>
+</body>
+</html>
